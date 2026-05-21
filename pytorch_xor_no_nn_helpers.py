@@ -1,0 +1,95 @@
+import math
+import time
+
+import torch
+
+
+data = [
+    ([0., 0.], [0]),
+    ([0., 1.], [1]),
+    ([1., 0.], [1]),
+    ([1., 1.], [0]),
+]
+
+
+def generate_layer_parameters(d_in, d_out):
+    root_k = math.sqrt(1. / d_in)
+    weights = (torch.rand(d_out, d_in) * 2 * root_k) - root_k
+    biases = (torch.rand(d_out) * 2 * root_k) - root_k
+    return {
+        "weights": weights.requires_grad_(),
+        "biases": biases.requires_grad_(),
+    }
+
+
+def forward(layers, inputs):
+    x = inputs
+    for layer in layers:
+        x = torch.sigmoid(
+            x @ layer["weights"].T + layer["biases"]
+        )
+    return x
+
+
+def zero_grad(layers):
+    for layer in layers:
+        for p in (layer["weights"], layer["biases"]):
+            if p.grad is not None:
+                p.grad.detach_()
+                p.grad.zero_()
+
+
+def step(layers, learning_rate):
+    with torch.no_grad():
+        for layer in layers:
+            for p in (layer["weights"], layer["biases"]):
+                if p.grad is not None:
+                    p -= p.grad * learning_rate
+
+
+def calculate_loss(layers, inputs, target):
+    result = forward(layers, inputs)
+    return ((result - target) ** 2).mean()
+
+
+def main():
+    torch.manual_seed(42)
+
+    layers = [
+        generate_layer_parameters(2, 2),
+        generate_layer_parameters(2, 1),
+    ]
+
+    learning_rate = 0.1
+
+    start = time.time()
+    for epoch in range(10000):
+        losses = []
+
+        for x, y in data:
+            zero_grad(layers)
+
+            loss = calculate_loss(layers, torch.tensor(x), torch.tensor(y))
+            loss.backward()
+            losses.append(loss.item())
+
+            step(layers, learning_rate)
+
+        if epoch % 1000 == 0:
+            avg_loss = sum(losses) / len(losses)
+            print(f"Loss at epoch {epoch}: {avg_loss:.6f}")
+
+    end = time.time()
+
+    print(f"Trained in {end - start:.3f}s")
+
+    print(f"Loss at end: {avg_loss:.6f}")
+
+    with torch.no_grad():
+        for x, y in data:
+            result = forward(layers, torch.tensor(x))
+            print(f"{x=}: {result=}, {y=}")
+
+
+if __name__ == "__main__":
+    main()
