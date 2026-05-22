@@ -68,7 +68,6 @@ def main():
         losses = []
 
         for x, y in data:
-
             loss, grads = jax.value_and_grad(calculate_loss)(layers, jnp.array(x), jnp.array(y))
             losses.append(loss.item())
 
