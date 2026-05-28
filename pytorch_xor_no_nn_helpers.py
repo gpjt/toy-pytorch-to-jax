@@ -34,9 +34,7 @@ def forward(layers, inputs):
 def zero_grad(layers):
     for layer in layers:
         for p in (layer["weights"], layer["biases"]):
-            if p.grad is not None:
-                p.grad.detach_()
-                p.grad.zero_()
+            p.grad = None
 
 
 def step(layers, learning_rate):
